@@ -1,0 +1,1 @@
+# Neural-network-determination-of-coordinates-in-the-work-area
