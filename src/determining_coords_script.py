@@ -141,7 +141,14 @@ def transform_to_work_area_coordinates(self, board_coords):
         # Выбираем самую длинную вертикальную линию
         longest = max(vertical_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
         return longest
-
+ def get_best_horizontal(self, horizontal_lines):
+        """Выбирает лучшую горизонтальную линию"""
+        if not horizontal_lines:
+            return [0, 0, 0, 0]
+        
+        # Выбираем самую длинную горизонтальную линию
+        longest = max(horizontal_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
+        return longest
 """Сюда добавляем функции из беседы"""
 
 def main():
