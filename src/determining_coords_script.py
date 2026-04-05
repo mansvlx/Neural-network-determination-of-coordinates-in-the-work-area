@@ -76,7 +76,53 @@ class ModernizedFrameWork:
 
 
 """Сюда добавляем функции из беседы"""
-
+def transform_to_work_area_coordinates(self, board_coords):
+        """Преобразует координаты заготовки в систему координат рабочей области"""
+        if not self.origin_point:
+            return None
+        
+        # Находим центр заготовки
+        center_x = int(np.mean([p[0] for p in board_coords]))
+        center_y = int(np.mean([p[1] for p in board_coords]))
+        
+        # Вычисляем относительные координаты (пиксели)
+        rel_x = center_x - self.origin_point[0]
+        rel_y = self.origin_point[1] - center_y  # Инвертируем Y для правильной ориентации
+        
+        # Преобразуем в реальные координаты (мм)
+        # Здесь нужна калибровка: сколько пикселей в мм
+        pixels_per_mm_x = 34.5  # Примерное значение, нужно откалибровать
+        pixels_per_mm_y = 35    # Примерное значение, нужно откалибровать
+        
+        real_x = rel_x / pixels_per_mm_x
+        real_y = rel_y / pixels_per_mm_y
+        
+        return (real_x, real_y)
+    def get_diagonal(self, box):
+        """Вычисляет диагональ прямоугольника"""
+        points = box.reshape(-1, 2)
+        distances = []
+        for i in range(len(points)):
+            for j in range(i+1, len(points)):
+                dist = np.sqrt((points[i][0] - points[j][0])**2 + (points[i][1] - points[j][1])**2)
+                distances.append(dist)
+        return max(distances)
+    
+    def det_min_max_side(self, box):
+        """Определяет минимальную и максимальную стороны"""
+        points = box.reshape(-1, 2)
+        sides = []
+        for i in range(len(points)):
+            j = (i + 1) % len(points)
+            side = np.sqrt((points[i][0] - points[j][0])**2 + (points[i][1] - points[j][1])**2)
+            sides.append(side)
+        return min(sides), max(sides)
+    
+    def get_vertical_and_horizontal(self, lines, img):
+        """Разделяет линии на вертикальные и горизонтальные"""
+        vertical = []
+        horizontal = []
+        
 
 
 """Сюда добавляем функции из беседы"""
