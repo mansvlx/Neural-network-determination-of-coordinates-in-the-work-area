@@ -133,7 +133,14 @@ def transform_to_work_area_coordinates(self, board_coords):
                     vertical.append([x1, y1, x2, y2])
         
         return vertical, horizontal, img
-
+  def get_best_vertical(self, vertical_lines):
+        """Выбирает лучшую вертикальную линию"""
+        if not vertical_lines:
+            return [0, 0, 0, 0]
+        
+        # Выбираем самую длинную вертикальную линию
+        longest = max(vertical_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
+        return longest
 
 """Сюда добавляем функции из беседы"""
 
