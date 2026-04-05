@@ -122,7 +122,17 @@ def transform_to_work_area_coordinates(self, board_coords):
         """Разделяет линии на вертикальные и горизонтальные"""
         vertical = []
         horizontal = []
+           if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
+                
+                if abs(angle) < 10 or abs(abs(angle) - 180) < 10:
+                    horizontal.append([x1, y1, x2, y2])
+                elif abs(abs(angle) - 90) < 10:
+                    vertical.append([x1, y1, x2, y2])
         
+        return vertical, horizontal, img
 
 
 """Сюда добавляем функции из беседы"""
