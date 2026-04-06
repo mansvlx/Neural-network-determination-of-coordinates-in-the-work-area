@@ -149,6 +149,52 @@ def transform_to_work_area_coordinates(self, board_coords):
         # Выбираем самую длинную горизонтальную линию
         longest = max(horizontal_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
         return longest
+
+def find_board_by_cam_two_enhanced(self, img, req_diagonal, min_side, max_side):
+    """Улучшенный метод поиска заготовки с использованием YOLO"""
+    # Пробуем найти заготовку через YOLO
+    yolo_board = self.yolo.detect_work_area(img)  # Используем ту же модель, но с другим классом
+    
+    if yolo_board:
+        # Если YOLO нашел, проверяем размеры
+        box = np.array(yolo_board, dtype=np.int0)
+        diagonal_ = self.get_diagonal(box) / 10.286
+        min_side_, max_side_ = self.det_min_max_side(box)
+    
+        if ((diagonal_ < req_diagonal + 15) and (diagonal_ > req_diagonal - 15)) and \
+            ((min_side_ < min_side + 10) and (min_side_ > min_side - 10)) and \
+            ((max_side_ < max_side + 10) and (max_side_ > max_side - 10)):
+            return box
+    
+    # Fallback на старый метод
+    return self.find_board_by_cam_two_old(img, req_diagonal, min_side, max_side)
+
+def find_board_by_cam_two_old(self, img, req_diagonal, min_side, max_side):
+    """Старый метод поиска заготовки"""
+    out_coor = list()
+    hsv_min = np.array((0, 54, 5), np.uint8)
+    hsv_max = np.array((187, 255, 253), np.uint8)
+    
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    thresh = cv.inRange(hsv, hsv_min, hsv_max)
+    contours0, hierarche = cv.findContours(thresh.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    
+    for cnt in contours0:
+        rect = cv.minAreaRect(cnt)
+        box = cv.boxPoints(rect)
+        box = np.int0(box)
+        diagonal_ = self.get_diagonal(box) / 10.286
+        min_side_, max_side_ = self.det_min_max_side(box)
+        
+        if ((diagonal_ < req_diagonal + 15) and (diagonal_ > req_diagonal - 15)) and \
+            ((min_side_ < min_side + 10) and (min_side_ > min_side - 10)) and \
+            ((max_side_ < max_side + 10) and (max_side_ > max_side - 10)):
+            out_coor = box
+            cv.drawContours(img, [box], 0, (255, 0, 0), 12)
+            
+    return out_coor
+
+
 """Сюда добавляем функции из беседы"""
 
 def main():
