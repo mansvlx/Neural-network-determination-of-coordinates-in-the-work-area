@@ -6,17 +6,13 @@ import torch
 
 class YOLODetector:
     def __init__(self, model_path='yolov8n.pt'):
-        """Инициализация YOLO модели"""
         self.model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=False)
         self.model.conf = 0.5  # Уверенность детекции
         self.model.iou = 0.45  # IoU порог
         
     def detect_work_area(self, img):
-        """Детекция рабочей области с помощью YOLO"""
         results = self.model(img)
         detections = results.pandas().xyxy[0]
-        
-        # Ищем класс "work_area" (нужно обучить модель или использовать существующие классы)
         work_areas = detections[detections['name'] == 'work_area']
         
         if len(work_areas) > 0:
