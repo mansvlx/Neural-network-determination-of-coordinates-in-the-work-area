@@ -23,10 +23,8 @@ class YOLODetector:
         return None
     
     def detect_calibration_marker(self, img):
-        """Детекция калибровочной метки (точки отсчета)"""
         results = self.model(img)
         detections = results.pandas().xyxy[0]
-        
         # Ищем калибровочную метку
         markers = detections[detections['name'] == 'calibration_marker']
         
@@ -68,34 +66,25 @@ class ModernizedFrameWork:
                 
         cam.release()
         return out
-
-
-
-"""Сюда добавляем функции из беседы"""
 def transform_to_work_area_coordinates(self, board_coords):
-        """Преобразует координаты заготовки в систему координат рабочей области"""
+        # Преобразует координаты заготовки в систему координат рабочей области
         if not self.origin_point:
             return None
-        
         # Находим центр заготовки
         center_x = int(np.mean([p[0] for p in board_coords]))
         center_y = int(np.mean([p[1] for p in board_coords]))
-        
-        # Вычисляем относительные координаты (пиксели)
+        # Вычисляем относительные координаты
         rel_x = center_x - self.origin_point[0]
-        rel_y = self.origin_point[1] - center_y  # Инвертируем Y для правильной ориентации
-        
+        rel_y = self.origin_point[1] - center_y
         # Преобразуем в реальные координаты (мм)
-        # Здесь нужна калибровка: сколько пикселей в мм
-        pixels_per_mm_x = 34.5  # Примерное значение, нужно откалибровать
-        pixels_per_mm_y = 35    # Примерное значение, нужно откалибровать
-        
+        # Здесь нужна ручная калибровка: сколько пикселей в мм
+        pixels_per_mm_x = 34.5 
+        pixels_per_mm_y = 35 
         real_x = rel_x / pixels_per_mm_x
         real_y = rel_y / pixels_per_mm_y
         
         return (real_x, real_y)
     def get_diagonal(self, box):
-        """Вычисляет диагональ прямоугольника"""
         points = box.reshape(-1, 2)
         distances = []
         for i in range(len(points)):
@@ -105,7 +94,6 @@ def transform_to_work_area_coordinates(self, board_coords):
         return max(distances)
     
     def det_min_max_side(self, box):
-        """Определяет минимальную и максимальную стороны"""
         points = box.reshape(-1, 2)
         sides = []
         for i in range(len(points)):
@@ -115,7 +103,6 @@ def transform_to_work_area_coordinates(self, board_coords):
         return min(sides), max(sides)
     
     def get_vertical_and_horizontal(self, lines, img):
-        """Разделяет линии на вертикальные и горизонтальные"""
         vertical = []
         horizontal = []
            if lines is not None:
