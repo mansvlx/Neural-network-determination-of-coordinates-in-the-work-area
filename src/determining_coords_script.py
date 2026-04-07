@@ -116,48 +116,38 @@ def transform_to_work_area_coordinates(self, board_coords):
                     vertical.append([x1, y1, x2, y2])
         
         return vertical, horizontal, img
+    
   def get_best_vertical(self, vertical_lines):
-        """Выбирает лучшую вертикальную линию"""
         if not vertical_lines:
             return [0, 0, 0, 0]
-        
-        # Выбираем самую длинную вертикальную линию
         longest = max(vertical_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
         return longest
+      
  def get_best_horizontal(self, horizontal_lines):
         """Выбирает лучшую горизонтальную линию"""
         if not horizontal_lines:
             return [0, 0, 0, 0]
-        
-        # Выбираем самую длинную горизонтальную линию
         longest = max(horizontal_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
         return longest
-"""Сюда добавляем функции из беседы"""
 
 def main():
     fwa = ModernizedFrameWork()
-    
     # Получение кадра
     img = fwa.get_frames(2)
     timestamp = str(int(time.time()) % 100000)
     img_path = f'/tmp/out_2_{timestamp}.jpeg'
     cv.imwrite(img_path, img)
-    
     # Определение рабочей области с помощью YOLO
     img_corrected = fwa.detect_work_area_with_yolo(img)
-    
     # Поиск заготовки и получение относительных координат
-    req_diagonal = 100  # Примерное значение
-    min_side = 50       # Примерное значение
-    max_side = 80       # Примерное значение
-    
+    # Значения ниже примерные
+    req_diagonal = 100 
+    min_side = 50
+    max_side = 80 
     board_coords, relative_coords = fwa.find_board_relative_to_work_area(
-        img_path, req_diagonal, min_side, max_side
-    )
-    
+        img_path, req_diagonal, min_side, max_side)
     if relative_coords:
         print(f"Координаты заготовки относительно рабочей области: X={relative_coords[0]:.2f} мм, Y={relative_coords[1]:.2f} мм")
-      
 if __name__ == "__main__":
     main()
 
