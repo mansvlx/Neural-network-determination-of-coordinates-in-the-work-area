@@ -151,71 +151,9 @@ def detect_work_area_with_yolo(self, img):
         # Находим точку отсчета (левый нижний угол рабочей области)
         self.origin_point = self.find_origin_point(work_area)
         
-        return self.correct_perspective_by_yolo(img, work_area)
-    
-def find_origin_point(self, work_area):
-    """Находит точку отсчета (левый нижний угол)"""
-    # Сортируем точки по x и y
-    points = sorted(work_area, key=lambda p: (p[0], p[1]))
-    # Левая нижняя точка имеет минимальный x и максимальный y
-    origin = min(points, key=lambda p: (p[0], -p[1]))
-    return origin
-
-def correct_perspective_by_yolo(self, img, work_area):
-    """Корректирует перспективу на основе найденной YOLO области"""
-    input_pts = np.float32(work_area)
-    
-    # Создаем выходные точки для прямоугольной области
-    width = int(max([p[0] for p in work_area]) - min([p[0] for p in work_area]))
-    height = int(max([p[1] for p in work_area]) - min([p[1] for p in work_area]))
-    
-    output_pts = np.float32(
-        [[0, height],# левый нижний
-        [0, 0],       # левый верхний
-        [width, 0],   # правый верхний
-        [width, height]  # правый нижний
-    ])
-    
-    M = cv.getPerspectiveTransform(input_pts, output_pts)
-    out = cv.warpPerspective(img, M, (width, height), flags=cv.INTER_LINEAR)
-    
-    return out
-
-def correcting_perspective_old(self, img):
-    """Старый метод коррекции перспективы (для обратной совместимости)"""
-    pt_A = [212, 284]
-    pt_B = [212, 2097]
-    pt_C = [3294, 2033]
-    pt_D = [3208, 207]
-    
-    input_pts = np.float32([pt_A, pt_B, pt_C, pt_D])
-    output_pts = np.float32([[210, 204], [210, 2097], [3296, 2097], [3296, 204]])
-    
-    M = cv.getPerspectiveTransform(input_pts, output_pts)
-    out = cv.warpPerspective(img, M, (img.shape[1], img.shape[0]), flags=cv.INTER_LINEAR)
-    
-    return out[204:2097, 210:3296]
-
-def find_board_relative_to_work_area(self, img_path, req_diagonal, min_side, max_side):
-    """Находит заготовку и определяет ее координаты относительно рабочей области"""
-    # Загружаем и корректируем изображение
-    img = cv.imread(img_path)
-    
-    # Если у нас есть рабочая область, используем YOLO для коррекции
-    if self.work_area_coords is not None:
-        img_corrected = self.correct_perspective_by_yolo(img, self.work_area_coords)
-    else:
-        img_corrected = self.correcting_perspective_old(img)
-    
-    # Определяем заготовку (используем существующий метод)
-    board_coords = self.find_board_by_cam_two_enhanced(img_corrected, req_diagonal, min_side, max_side)
-    
-    if board_coords and self.origin_point:
-        # Переводим координаты заготовки в систему координат рабочей области
-        relative_coords = self.transform_to_work_area_coordinates(board_coords)
-        return board_coords, relative_coords
-    
-    return board_coords, None
+        # Выбираем самую длинную горизонтальную линию
+        longest = max(horizontal_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
+        return longest
 
 def find_board_by_cam_two_enhanced(self, img, req_diagonal, min_side, max_side):
     """Улучшенный метод поиска заготовки с использованием YOLO"""
@@ -227,7 +165,39 @@ def find_board_by_cam_two_enhanced(self, img, req_diagonal, min_side, max_side):
         box = np.array(yolo_board, dtype=np.int0)
         diagonal_ = self.get_diagonal(box) / 10.286
         min_side_, max_side_ = self.det_min_max_side(box)
+    
+        if ((diagonal_ < req_diagonal + 15) and (diagonal_ > req_diagonal - 15)) and \
+            ((min_side_ < min_side + 10) and (min_side_ > min_side - 10)) and \
+            ((max_side_ < max_side + 10) and (max_side_ > max_side - 10)):
+            return box
+    
+    # Fallback на старый метод
+    return self.find_board_by_cam_two_old(img, req_diagonal, min_side, max_side)
 
+def find_board_by_cam_two_old(self, img, req_diagonal, min_side, max_side):
+    """Старый метод поиска заготовки"""
+    out_coor = list()
+    hsv_min = np.array((0, 54, 5), np.uint8)
+    hsv_max = np.array((187, 255, 253), np.uint8)
+    
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    thresh = cv.inRange(hsv, hsv_min, hsv_max)
+    contours0, hierarche = cv.findContours(thresh.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    
+    for cnt in contours0:
+        rect = cv.minAreaRect(cnt)
+        box = cv.boxPoints(rect)
+        box = np.int0(box)
+        diagonal_ = self.get_diagonal(box) / 10.286
+        min_side_, max_side_ = self.det_min_max_side(box)
+        
+        if ((diagonal_ < req_diagonal + 15) and (diagonal_ > req_diagonal - 15)) and \
+            ((min_side_ < min_side + 10) and (min_side_ > min_side - 10)) and \
+            ((max_side_ < max_side + 10) and (max_side_ > max_side - 10)):
+            out_coor = box
+            cv.drawContours(img, [box], 0, (255, 0, 0), 12)
+            
+    return out_coor
 
 
 """Сюда добавляем функции из беседы"""
