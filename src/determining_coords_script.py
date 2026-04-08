@@ -6,17 +6,13 @@ import torch
 
 class YOLODetector:
     def __init__(self, model_path='yolov8n.pt'):
-        """Инициализация YOLO модели"""
         self.model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=False)
         self.model.conf = 0.5  # Уверенность детекции
         self.model.iou = 0.45  # IoU порог
         
     def detect_work_area(self, img):
-        """Детекция рабочей области с помощью YOLO"""
         results = self.model(img)
         detections = results.pandas().xyxy[0]
-        
-        # Ищем класс "work_area" (нужно обучить модель или использовать существующие классы)
         work_areas = detections[detections['name'] == 'work_area']
         
         if len(work_areas) > 0:
@@ -27,10 +23,8 @@ class YOLODetector:
         return None
     
     def detect_calibration_marker(self, img):
-        """Детекция калибровочной метки (точки отсчета)"""
         results = self.model(img)
         detections = results.pandas().xyxy[0]
-        
         # Ищем калибровочную метку
         markers = detections[detections['name'] == 'calibration_marker']
         
@@ -72,28 +66,20 @@ class ModernizedFrameWork:
                 
         cam.release()
         return out
-
-
-
-"""Сюда добавляем функции из беседы"""
 def transform_to_work_area_coordinates(self, board_coords):
-        """Преобразует координаты заготовки в систему координат рабочей области"""
+        # Преобразует координаты заготовки в систему координат рабочей области
         if not self.origin_point:
             return None
-        
         # Находим центр заготовки
         center_x = int(np.mean([p[0] for p in board_coords]))
         center_y = int(np.mean([p[1] for p in board_coords]))
-        
-        # Вычисляем относительные координаты (пиксели)
+        # Вычисляем относительные координаты
         rel_x = center_x - self.origin_point[0]
-        rel_y = self.origin_point[1] - center_y  # Инвертируем Y для правильной ориентации
-        
+        rel_y = self.origin_point[1] - center_y
         # Преобразуем в реальные координаты (мм)
-        # Здесь нужна калибровка: сколько пикселей в мм
-        pixels_per_mm_x = 34.5  # Примерное значение, нужно откалибровать
-        pixels_per_mm_y = 35    # Примерное значение, нужно откалибровать
-        
+        # Здесь нужна ручная калибровка: сколько пикселей в мм
+        pixels_per_mm_x = 34.5 
+        pixels_per_mm_y = 35 
         real_x = rel_x / pixels_per_mm_x
         real_y = rel_y / pixels_per_mm_y
         
@@ -248,28 +234,22 @@ def find_board_by_cam_two_enhanced(self, img, req_diagonal, min_side, max_side):
 
 def main():
     fwa = ModernizedFrameWork()
-    
     # Получение кадра
     img = fwa.get_frames(2)
     timestamp = str(int(time.time()) % 100000)
     img_path = f'/tmp/out_2_{timestamp}.jpeg'
     cv.imwrite(img_path, img)
-    
     # Определение рабочей области с помощью YOLO
     img_corrected = fwa.detect_work_area_with_yolo(img)
-    
     # Поиск заготовки и получение относительных координат
-    req_diagonal = 100  # Примерное значение
-    min_side = 50       # Примерное значение
-    max_side = 80       # Примерное значение
-    
+    # Значения ниже примерные
+    req_diagonal = 100 
+    min_side = 50
+    max_side = 80 
     board_coords, relative_coords = fwa.find_board_relative_to_work_area(
-        img_path, req_diagonal, min_side, max_side
-    )
-    
+        img_path, req_diagonal, min_side, max_side)
     if relative_coords:
         print(f"Координаты заготовки относительно рабочей области: X={relative_coords[0]:.2f} мм, Y={relative_coords[1]:.2f} мм")
-      
 if __name__ == "__main__":
     main()
 
