@@ -14,7 +14,6 @@ class YOLODetector:
         results = self.model(img)
         detections = results.pandas().xyxy[0]
         work_areas = detections[detections['name'] == 'work_area']
-        
         if len(work_areas) > 0:
             # Берем первую найденную рабочую область
             area = work_areas.iloc[0]
@@ -27,7 +26,6 @@ class YOLODetector:
         detections = results.pandas().xyxy[0]
         # Ищем калибровочную метку
         markers = detections[detections['name'] == 'calibration_marker']
-        
         if len(markers) > 0:
             marker = markers.iloc[0]
             center_x = int((marker['xmin'] + marker['xmax']) / 2)
@@ -43,13 +41,11 @@ class ModernizedFrameWork:
         self.calibration_matrix = None
         
     def get_frames(self, id):
-        """Получение кадров с камеры"""
         cam = cv.VideoCapture(id)
         assert cam.isOpened()
         cam.set(3, 1920)
         cam.set(4, 1080)
         out = np.zeros((int(cam.get(4)*2), int(cam.get(3)*2), 3))
-        
         for i in range(10):
             ret, frame = cam.read()
             if ret:
@@ -63,9 +59,9 @@ class ModernizedFrameWork:
             ret, frame = cam.read()
             if ret:
                 out[1::2, 1::2] = frame
-                
         cam.release()
         return out
+        
 def transform_to_work_area_coordinates(self, board_coords):
         # Преобразует координаты заготовки в систему координат рабочей области
         if not self.origin_point:
@@ -82,11 +78,9 @@ def transform_to_work_area_coordinates(self, board_coords):
         pixels_per_mm_y = 35 
         real_x = rel_x / pixels_per_mm_x
         real_y = rel_y / pixels_per_mm_y
-        
         return (real_x, real_y)
 
 def get_diagonal(self, box):
-    """Вычисляет диагональ прямоугольника"""
     points = box.reshape(-1, 2)
     distances = []
     for i in range(len(points)):
@@ -96,7 +90,6 @@ def get_diagonal(self, box):
     return max(distances)
 
 def det_min_max_side(self, box):
-    """Определяет минимальную и максимальную стороны"""
     points = box.reshape(-1, 2)
     sides = []
     for i in range(len(points)):
@@ -106,7 +99,6 @@ def det_min_max_side(self, box):
     return min(sides), max(sides)
 
 def get_vertical_and_horizontal(self, lines, img):
-    """Разделяет линии на вертикальные и горизонтальные"""
     vertical = []
     horizontal = []
     if lines is not None:
@@ -118,90 +110,68 @@ def get_vertical_and_horizontal(self, lines, img):
                 horizontal.append([x1, y1, x2, y2])
             elif abs(abs(angle) - 90) < 10:
                 vertical.append([x1, y1, x2, y2])
-    
     return vertical, horizontal, img
+    
 def get_best_vertical(self, vertical_lines):
-    """Выбирает лучшую вертикальную линию"""
     if not vertical_lines:
         return [0, 0, 0, 0]
-    
-    # Выбираем самую длинную вертикальную линию
     longest = max(vertical_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
     return longest
+    
 def get_best_horizontal(self, horizontal_lines):
-    """Выбирает лучшую горизонтальную линию"""
     if not horizontal_lines:
         return [0, 0, 0, 0]
-    
-    # Выбираем самую длинную горизонтальную линию
     longest = max(horizontal_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
     return longest
 
 def detect_work_area_with_yolo(self, img):
-        """Определение рабочей области с помощью YOLO"""
         work_area = self.yolo.detect_work_area(img)
-        
         if work_area is None:
             # Fallback на старый метод, если YOLO не нашел
             return self.correcting_perspective_old(img)
-        
         # Сохраняем координаты рабочей области
         self.work_area_coords = work_area
-        
         # Находим точку отсчета (левый нижний угол рабочей области)
         self.origin_point = self.find_origin_point(work_area)
-        
         # Выбираем самую длинную горизонтальную линию
         longest = max(horizontal_lines, key=lambda line: np.sqrt((line[2]-line[0])**2 + (line[3]-line[1])**2))
         return longest
 
 def find_board_by_cam_two_enhanced(self, img, req_diagonal, min_side, max_side):
-    """Улучшенный метод поиска заготовки с использованием YOLO"""
     # Пробуем найти заготовку через YOLO
     yolo_board = self.yolo.detect_work_area(img)  # Используем ту же модель, но с другим классом
-    
     if yolo_board:
         # Если YOLO нашел, проверяем размеры
         box = np.array(yolo_board, dtype=np.int0)
         diagonal_ = self.get_diagonal(box) / 10.286
         min_side_, max_side_ = self.det_min_max_side(box)
-    
         if ((diagonal_ < req_diagonal + 15) and (diagonal_ > req_diagonal - 15)) and \
             ((min_side_ < min_side + 10) and (min_side_ > min_side - 10)) and \
             ((max_side_ < max_side + 10) and (max_side_ > max_side - 10)):
             return box
-    
     # Fallback на старый метод
     return self.find_board_by_cam_two_old(img, req_diagonal, min_side, max_side)
 
 def find_board_by_cam_two_old(self, img, req_diagonal, min_side, max_side):
-    """Старый метод поиска заготовки"""
     out_coor = list()
     hsv_min = np.array((0, 54, 5), np.uint8)
     hsv_max = np.array((187, 255, 253), np.uint8)
-    
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
     thresh = cv.inRange(hsv, hsv_min, hsv_max)
     contours0, hierarche = cv.findContours(thresh.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    
     for cnt in contours0:
         rect = cv.minAreaRect(cnt)
         box = cv.boxPoints(rect)
         box = np.int0(box)
         diagonal_ = self.get_diagonal(box) / 10.286
         min_side_, max_side_ = self.det_min_max_side(box)
-        
         if ((diagonal_ < req_diagonal + 15) and (diagonal_ > req_diagonal - 15)) and \
             ((min_side_ < min_side + 10) and (min_side_ > min_side - 10)) and \
             ((max_side_ < max_side + 10) and (max_side_ > max_side - 10)):
             out_coor = box
             cv.drawContours(img, [box], 0, (255, 0, 0), 12)
-            
     return out_coor
-
-
-"""Сюда добавляем функции из беседы"""
-
+    
 def main():
     fwa = ModernizedFrameWork()
     # Получение кадра
